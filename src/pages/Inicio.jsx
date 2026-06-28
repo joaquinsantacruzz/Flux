@@ -146,7 +146,7 @@ export default function Inicio() {
           </div>
           <div>
             <p className="text-xs font-semibold text-flux-gray">Buenas, {nombre.split(' ')[0] || 'usuario'}</p>
-            <p className="text-[17px] font-extrabold text-flux-ink" style={{ letterSpacing: '-.4px' }}>Tu plata hoy</p>
+            <p className="text-[17px] font-extrabold text-flux-ink" style={{ letterSpacing: '-.4px' }}>Tu dinero hoy</p>
           </div>
         </div>
         <button
