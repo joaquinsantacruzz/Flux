@@ -107,7 +107,7 @@ export default function Login() {
             <input
               type="text" required
               value={cedula} onChange={e => setCedula(e.target.value)}
-              placeholder="Ej: 4.123.456"
+              placeholder="Ej: 4123456"
               className="input-field"
               inputMode="numeric"
               autoComplete="username"
@@ -129,7 +129,7 @@ export default function Login() {
             <input
               type={showPass ? 'text' : 'password'} required minLength={6}
               value={password} onChange={e => setPassword(e.target.value)}
-              placeholder="Mínimo 6 caracteres"
+              placeholder="Contraseña"
               className="input-field"
               autoComplete={isLogin ? 'current-password' : 'new-password'}
             />
