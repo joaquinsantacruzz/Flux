@@ -1,134 +1,246 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { transacciones } from '../supabaseClient'
+import { movimientos } from '../supabaseClient'
 import {
-  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, Legend
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, Tooltip, ResponsiveContainer
 } from 'recharts'
 
-const COLORS = ['#111111','#666666','#aaaaaa','#cccccc','#e5e5e5','#f5f5f5','#22c55e','#ef4444','#3b82f6','#f59e0b']
+const PIE_COLORS = ['#0CAE73','#0EA5E9','#7C5CFF','#E08600','#E5484D','#42434A','#0A8F60','#F59E0B']
+
+const CAT_ICONS = {
+  cenas:'🍽️', comida:'🍽️', transporte:'🚌', salud:'🏥', entretenimiento:'🎬',
+  ropa:'👕', hogar:'🏠', educacion:'📚', viajes:'✈️',
+  servicios:'⚡', sueldo:'💼', freelance:'💻', otro:'💰',
+  suscripciones:'📱', mascotas:'🐾', supermercado:'🛒',
+  prestamo_banco:'🏦', prestamo_coop:'🤝', tarjeta_credito:'💳',
+}
+
+const SHADOW = '0 8px 22px -10px rgba(14,15,19,.18), 0 1px 2px rgba(14,15,19,.04)'
+const BORDER = '1px solid rgba(14,15,19,.06)'
+
+const TooltipStyle = {
+  borderRadius: 12, border: BORDER, fontSize: 12,
+  fontFamily: 'Manrope', fontWeight: 600,
+  boxShadow: SHADOW,
+}
 
 export default function Estadisticas() {
   const { session } = useAuth()
   const userId = session?.user?.id
   const [items, setItems] = useState([])
-  const [periodo, setPeriodo] = useState('mes') // 'mes' | 'año'
+  const [loading, setLoading] = useState(true)
+  const [periodo, setPeriodo] = useState('mes')
 
   useEffect(() => {
     if (!userId) return
-    transacciones.list(userId).then(d => setItems(d || [])).catch(() => {})
+    movimientos.list(userId)
+      .then(d => setItems(d || []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [userId])
 
   const now = new Date()
+
   const filtrados = items.filter(t => {
     const d = new Date(t.fecha)
     if (periodo === 'mes') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
     return d.getFullYear() === now.getFullYear()
   })
 
-  // Por categoría
+  const totalIngresos = filtrados.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.monto, 0)
+  const totalGastos   = filtrados.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.monto, 0)
+  const savingsRate   = totalIngresos > 0 ? Math.round(((totalIngresos - totalGastos) / totalIngresos) * 100) : null
+
   const porCategoria = {}
   filtrados.filter(t => t.tipo === 'gasto').forEach(t => {
     porCategoria[t.categoria] = (porCategoria[t.categoria] || 0) + t.monto
   })
   const pieData = Object.entries(porCategoria)
     .map(([name, value]) => ({ name, value }))
-    .sort((a,b) => b.value - a.value)
+    .sort((a, b) => b.value - a.value)
 
-  // Por mes (últimos 6)
   const barData = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
     const label = d.toLocaleDateString('es', { month: 'short' })
-    const gastos = items.filter(t => {
-      const td = new Date(t.fecha)
-      return t.tipo === 'gasto' && td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear()
-    }).reduce((s, t) => s + t.monto, 0)
-    const ingresos = items.filter(t => {
-      const td = new Date(t.fecha)
-      return t.tipo === 'ingreso' && td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear()
-    }).reduce((s, t) => s + t.monto, 0)
+    const gastos   = items.filter(t => { const td = new Date(t.fecha); return t.tipo === 'gasto'    && td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear() }).reduce((s,t)=>s+t.monto,0)
+    const ingresos = items.filter(t => { const td = new Date(t.fecha); return t.tipo === 'ingreso'  && td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear() }).reduce((s,t)=>s+t.monto,0)
     return { label, gastos, ingresos }
   })
 
-  const totalGastos = filtrados.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.monto, 0)
-  const totalIngresos = filtrados.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.monto, 0)
+  const mesLabel = periodo === 'mes'
+    ? now.toLocaleDateString('es', { month: 'long', year: 'numeric' })
+    : now.getFullYear().toString()
 
   return (
-    <div className="page-container animate-fade-up">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Estadísticas</h1>
-        <div className="flex gap-1 bg-flux-light rounded-lg p-1">
-          {['mes','año'].map(p => (
-            <button
-              key={p}
-              onClick={() => setPeriodo(p)}
-              className={`px-3 py-1 rounded-md text-xs font-medium capitalize transition-all ${
-                periodo === p ? 'bg-white text-flux-black shadow-sm' : 'text-flux-gray'
-              }`}
-            >
-              {p === 'mes' ? 'Este mes' : 'Este año'}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className="min-h-dvh pb-32" style={{ background: '#E7E8EE' }}>
 
-      {/* Resumen */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="card">
-          <p className="text-xs text-flux-gray">Gastos</p>
-          <p className="text-xl font-bold text-flux-red mt-1">${totalGastos.toLocaleString('es')}</p>
-        </div>
-        <div className="card">
-          <p className="text-xs text-flux-gray">Ingresos</p>
-          <p className="text-xl font-bold text-flux-green mt-1">${totalIngresos.toLocaleString('es')}</p>
-        </div>
-      </div>
-
-      {/* Barras */}
-      <div className="card mb-6">
-        <p className="text-sm font-semibold mb-4">Últimos 6 meses</p>
-        <ResponsiveContainer width="100%" height={180}>
-          <BarChart data={barData} barSize={8} barGap={2}>
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
-            <YAxis hide />
-            <Tooltip
-              formatter={(v) => `$${v.toLocaleString('es')}`}
-              contentStyle={{ borderRadius: 12, border: '1px solid #e5e5e5', fontSize: 12 }}
-            />
-            <Bar dataKey="ingresos" fill="#22c55e" radius={4} name="Ingresos" />
-            <Bar dataKey="gastos" fill="#ef4444" radius={4} name="Gastos" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Pie por categoría */}
-      {pieData.length > 0 && (
-        <div className="card mb-6">
-          <p className="text-sm font-semibold mb-4">Gastos por categoría</p>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" paddingAngle={2}>
-                {pieData.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(v) => `$${v.toLocaleString('es')}`}
-                contentStyle={{ borderRadius: 12, border: '1px solid #e5e5e5', fontSize: 12 }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="space-y-2 mt-3">
-            {pieData.slice(0,5).map((d, i) => (
-              <div key={d.name} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
-                  <span className="text-xs capitalize text-flux-gray">{d.name}</span>
-                </div>
-                <span className="text-xs font-medium">${d.value.toLocaleString('es')}</span>
-              </div>
+      {/* Header */}
+      <div className="max-w-md mx-auto px-4 pt-5 pb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-[22px] font-extrabold" style={{ letterSpacing: '-.5px' }}>Estadísticas</h1>
+            <p className="text-[12px] font-semibold capitalize" style={{ color: '#888A93' }}>{mesLabel}</p>
+          </div>
+          {/* Segment selector */}
+          <div className="flex gap-1 p-1 rounded-[12px]" style={{ background: 'rgba(14,15,19,.08)' }}>
+            {[{ key:'mes', label:'Este mes' }, { key:'año', label:'Este año' }].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setPeriodo(key)}
+                className="px-3 py-[5px] rounded-[9px] text-[11.5px] font-bold transition-all"
+                style={periodo === key
+                  ? { background:'#fff', color:'#0E0F13', boxShadow:'0 1px 4px rgba(14,15,19,.12)' }
+                  : { color:'#888A93' }
+                }
+              >
+                {label}
+              </button>
             ))}
           </div>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center pt-16">
+          <div className="w-6 h-6 rounded-full border-2 border-flux-black border-t-transparent animate-spin" />
+        </div>
+      ) : (
+        <div className="max-w-md mx-auto px-4 grid grid-cols-2 gap-[13px]">
+
+          {/* Ingresos */}
+          <div className="bg-white rounded-[22px] p-[19px]" style={{ boxShadow: SHADOW, border: BORDER }}>
+            <div className="w-[30px] h-[30px] rounded-[9px] grid place-items-center mb-3" style={{ background: '#E6F6EF' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" stroke="#0A8F60" strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 17 17 7M9 7h8v8"/>
+              </svg>
+            </div>
+            <p className="text-[11.5px] font-semibold" style={{ color:'#888A93' }}>Ingresos</p>
+            <p className="text-[21px] font-extrabold mt-1 tabular-nums" style={{ letterSpacing:'-.6px', color:'#0A8F60' }}>
+              Gs. {totalIngresos.toLocaleString('es')}
+            </p>
+          </div>
+
+          {/* Gastos */}
+          <div className="bg-white rounded-[22px] p-[19px]" style={{ boxShadow: SHADOW, border: BORDER }}>
+            <div className="w-[30px] h-[30px] rounded-[9px] grid place-items-center mb-3" style={{ background:'#FDEAEA' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" stroke="#E5484D" strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 7l10 10M17 7v8H9"/>
+              </svg>
+            </div>
+            <p className="text-[11.5px] font-semibold" style={{ color:'#888A93' }}>Gastos</p>
+            <p className="text-[21px] font-extrabold mt-1 tabular-nums" style={{ letterSpacing:'-.6px', color:'#0E0F13' }}>
+              Gs. {totalGastos.toLocaleString('es')}
+            </p>
+          </div>
+
+          {/* Tasa de ahorro */}
+          {savingsRate !== null && (
+            <div className="bg-white rounded-[22px] p-[19px]" style={{ boxShadow: SHADOW, border: BORDER }}>
+              <p className="text-[11.5px] font-semibold mb-2" style={{ color:'#888A93' }}>Tasa de ahorro</p>
+              <p
+                className="text-[30px] font-extrabold tabular-nums leading-none"
+                style={{
+                  letterSpacing:'-.8px',
+                  color: savingsRate >= 20 ? '#0A8F60' : savingsRate >= 0 ? '#E08600' : '#E5484D'
+                }}
+              >
+                {savingsRate}%
+              </p>
+              <p className="text-[11px] font-semibold mt-2" style={{ color:'#B0B2BB' }}>
+                {savingsRate >= 20 ? '¡Excelente!' : savingsRate >= 0 ? 'Podés mejorar' : 'Déficit del mes'}
+              </p>
+            </div>
+          )}
+
+          {/* Mayor categoría de gasto */}
+          {pieData[0] && (
+            <div className="bg-white rounded-[22px] p-[19px]" style={{ boxShadow: SHADOW, border: BORDER }}>
+              <p className="text-[11.5px] font-semibold mb-2" style={{ color:'#888A93' }}>Mayor gasto</p>
+              <p className="text-[28px] leading-none">{CAT_ICONS[pieData[0].name] || '💰'}</p>
+              <p className="text-[13px] font-extrabold mt-2 capitalize" style={{ color:'#0E0F13' }}>{pieData[0].name}</p>
+              <p className="text-[11px] font-semibold tabular-nums" style={{ color:'#B0B2BB' }}>
+                Gs. {pieData[0].value.toLocaleString('es')}
+              </p>
+            </div>
+          )}
+
+          {/* Bar chart — últimos 6 meses */}
+          <div className="col-span-2 bg-white rounded-[22px] p-[19px]" style={{ boxShadow: SHADOW, border: BORDER }}>
+            <p className="text-[14px] font-extrabold mb-1" style={{ letterSpacing:'-.2px' }}>Últimos 6 meses</p>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full" style={{ background:'#0CAE73' }}/>
+                <span className="text-[11px] font-semibold" style={{ color:'#888A93' }}>Ingresos</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full" style={{ background:'#E5484D' }}/>
+                <span className="text-[11px] font-semibold" style={{ color:'#888A93' }}>Gastos</span>
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={155}>
+              <BarChart data={barData} barSize={10} barGap={3} margin={{ left:0, right:0, top:0, bottom:0 }}>
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize:10, fill:'#888A93', fontFamily:'Manrope', fontWeight:600 }}
+                  axisLine={false} tickLine={false}
+                />
+                <Tooltip
+                  formatter={(v) => `Gs. ${v.toLocaleString('es')}`}
+                  contentStyle={TooltipStyle}
+                  cursor={{ fill:'rgba(14,15,19,.04)' }}
+                />
+                <Bar dataKey="ingresos" fill="#0CAE73" radius={[4,4,0,0]} name="Ingresos"/>
+                <Bar dataKey="gastos"   fill="#E5484D" radius={[4,4,0,0]} name="Gastos"/>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Pie chart — por categoría */}
+          {pieData.length > 0 && (
+            <div className="col-span-2 bg-white rounded-[22px] p-[19px]" style={{ boxShadow: SHADOW, border: BORDER }}>
+              <p className="text-[14px] font-extrabold mb-4" style={{ letterSpacing:'-.2px' }}>Gastos por categoría</p>
+              <div className="flex items-center gap-5">
+                <div style={{ width:148, height:148, flexShrink:0 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData} cx="50%" cy="50%"
+                        innerRadius={42} outerRadius={66}
+                        dataKey="value" paddingAngle={3} stroke="none"
+                      >
+                        {pieData.map((_, i) => (
+                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]}/>
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(v) => `Gs. ${v.toLocaleString('es')}`}
+                        contentStyle={{ ...TooltipStyle, fontSize:11 }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex-1 space-y-[9px] min-w-0">
+                  {pieData.slice(0, 5).map((d, i) => (
+                    <div key={d.name} className="flex items-center gap-2">
+                      <div className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }}/>
+                      <span className="text-[12px] capitalize flex-1 truncate font-semibold" style={{ color:'#42434A' }}>{d.name}</span>
+                      <span className="text-[11.5px] font-bold tabular-nums" style={{ color:'#0E0F13' }}>Gs. {d.value.toLocaleString('es')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {filtrados.length === 0 && (
+            <div className="col-span-2 bg-white rounded-[22px] p-8 text-center" style={{ boxShadow: SHADOW, border: BORDER }}>
+              <p className="text-3xl mb-3">📊</p>
+              <p className="text-[14px] font-extrabold" style={{ color:'#0E0F13' }}>Sin datos para este período</p>
+              <p className="text-[12px] font-medium mt-1" style={{ color:'#888A93' }}>Agregá movimientos desde Inicio</p>
+            </div>
+          )}
+
         </div>
       )}
     </div>

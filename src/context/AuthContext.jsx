@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { loadSession, signOut, getSession } from '../supabaseClient'
+import { loadLocalSession, localSignOut } from '../supabaseClient'
 
 const AuthContext = createContext(null)
 
@@ -9,7 +9,7 @@ export function AuthProvider({ children }) {
   const [pinVerified, setPinVerified] = useState(false)
 
   useEffect(() => {
-    const s = loadSession()
+    const s = loadLocalSession()
     setSession(s)
     setLoading(false)
   }, [])
@@ -20,7 +20,7 @@ export function AuthProvider({ children }) {
   }
 
   function logout() {
-    signOut()
+    localSignOut()
     setSession(null)
     setPinVerified(false)
   }

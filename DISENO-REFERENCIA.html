@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Wallet Flow — Tablero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#E7E8EE;
+    --card:#FFFFFF;
+    --ink:#0E0F13;
+    --ink-2:#42434A;
+    --gray:#888A93;
+    --gray-2:#B0B2BB;
+    --line:rgba(14,15,19,.06);
+    --fill:#F0F0F4;
+    --accent:#0CAE73;
+    --accent-ink:#0A8F60;
+    --accent-soft:#E6F6EF;
+    --mint:#EAF7F1;
+    --amber:#E08600;
+    --coral:#E5484D;
+    --violet:#7C5CFF;
+    --blue:#0EA5E9;
+    --pink:#EC4899;
+    --shadow:0 8px 22px -10px rgba(14,15,19,.18), 0 1px 2px rgba(14,15,19,.04);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:'Manrope',system-ui,sans-serif;background:#cfd0d6;color:var(--ink);
+    display:flex;justify-content:center;align-items:flex-start;min-height:100vh;font-feature-settings:"tnum";
+  }
+  @media(min-width:540px){body{padding:32px 0;background:#bcbdc4}}
+
+  .app{position:relative;width:100%;max-width:430px;min-height:100vh;background:var(--bg);overflow:hidden;display:flex;flex-direction:column}
+  @media(min-width:540px){.app{min-height:920px;max-height:920px;border-radius:46px;box-shadow:0 50px 130px -30px rgba(0,0,0,.5);border:1px solid rgba(0,0,0,.07)}}
+
+  .scroll{flex:1;overflow-y:auto;padding:14px 16px 108px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .scroll::-webkit-scrollbar{display:none}
+  .screen{display:none}
+  .screen.active{display:block;animation:fade .32s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* ---------- top ---------- */
+  .top{display:flex;align-items:center;justify-content:space-between;padding:8px 6px 16px}
+  .top .who{display:flex;align-items:center;gap:11px}
+  .pfp{width:42px;height:42px;border-radius:14px;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px}
+  .top .who small{display:block;color:var(--gray);font-size:12px;font-weight:600}
+  .top .who b{font-size:17px;font-weight:800;letter-spacing:-.4px}
+  .tbtn{width:42px;height:42px;border-radius:14px;background:var(--card);display:grid;place-items:center;color:var(--ink-2);position:relative;box-shadow:var(--shadow)}
+  .tbtn svg{width:19px;height:19px}
+  .tbtn .pip{position:absolute;top:10px;right:11px;width:7px;height:7px;border-radius:50%;background:var(--coral);border:2px solid var(--card)}
+
+  /* ---------- BENTO grid ---------- */
+  .bento{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  .mod{background:var(--card);border-radius:22px;padding:19px;box-shadow:var(--shadow);border:1px solid var(--line);position:relative;overflow:hidden}
+  .w2{grid-column:span 2}
+
+  /* hero balance (color) */
+  .hero{grid-column:span 2;border-radius:26px;padding:26px 22px 24px;color:#fff;position:relative;overflow:hidden;
+    background:linear-gradient(135deg,#0CAE73 0%,#0AA079 45%,#0E93A6 100%);
+    box-shadow:0 18px 36px -16px rgba(12,150,120,.7)}
+  .hero::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 100% 0%,rgba(255,255,255,.22),transparent 55%);pointer-events:none}
+  .hero .lab{font-size:12.5px;font-weight:600;color:rgba(255,255,255,.82);letter-spacing:.2px}
+  .hero .num{font-size:48px;font-weight:800;letter-spacing:-1.8px;line-height:1;margin:9px 0 0;font-variant-numeric:tabular-nums}
+  .hero .num .c{font-size:23px;font-weight:700;opacity:.7;vertical-align:5px;margin-right:4px}
+  .hero .delta{display:inline-flex;align-items:center;gap:5px;margin-top:13px;background:rgba(255,255,255,.18);font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px}
+  .hero .delta svg{width:12px;height:12px}
+  .hero .spark{position:absolute;right:18px;bottom:16px;width:115px;height:42px;opacity:.85}
+
+  /* small stat modules */
+  .mod .mlab{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--gray);font-weight:600}
+  .mod .mic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex-shrink:0}
+  .mod .mic svg{width:14px;height:14px}
+  .mic-in{background:var(--accent-soft);color:var(--accent-ink)}
+  .mic-out{background:var(--fill);color:var(--ink-2)}
+  .mod .mval{font-size:22px;font-weight:800;letter-spacing:-.6px;margin-top:13px;font-variant-numeric:tabular-nums}
+  .mod .msub{font-size:11.5px;color:var(--gray-2);font-weight:600;margin-top:3px}
+
+  /* presupuesto module */
+  .pmod .ptop{display:flex;align-items:center;justify-content:space-between}
+  .pmod .ptop b{font-size:14px;font-weight:800;letter-spacing:-.2px}
+  .pmod .ptop .pp{font-size:12px;font-weight:800;color:var(--amber);background:rgba(224,134,0,.12);padding:4px 9px;border-radius:8px}
+  .pmod .pamt{display:flex;align-items:baseline;gap:7px;margin-top:13px}
+  .pmod .pamt b{font-size:23px;font-weight:800;letter-spacing:-.7px;font-variant-numeric:tabular-nums}
+  .pmod .pamt span{font-size:12.5px;color:var(--gray);font-weight:600}
+  .ptrack{height:9px;border-radius:999px;background:var(--fill);margin-top:13px;overflow:hidden}
+  .ptrack>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#F0A100,#E5484D)}
+  .pmod .pfoot{display:flex;justify-content:space-between;margin-top:11px;font-size:12px;color:var(--gray);font-weight:600}
+  .pmod .pfoot b{color:var(--accent-ink);font-weight:800}
+
+  /* mini donut module */
+  .dmod .mlab{margin-bottom:6px}
+  .ddraw{display:flex;align-items:center;gap:13px;margin-top:8px}
+  .minidonut{position:relative;width:66px;height:66px;flex-shrink:0}
+  .minidonut svg{transform:rotate(-90deg);width:100%;height:100%}
+  .minidonut circle{fill:none;stroke-width:5}
+  .minidonut .mc{position:absolute;inset:0;display:grid;place-items:center;font-size:13px;font-weight:800}
+  .dmod .dtop{font-size:11.5px;color:var(--gray);font-weight:600}
+  .dmod .dtop b{display:block;color:var(--ink);font-size:13px;font-weight:700;margin-top:2px}
+  .dlist{font-size:11px;color:var(--gray);font-weight:600;line-height:1.7;margin-top:2px}
+  .dlist i{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px;vertical-align:1px}
+
+  /* metas module (tinted) */
+  .gmod{background:var(--mint);border-color:rgba(12,174,115,.14)}
+  .gmod .gring{position:relative;width:66px;height:66px;flex-shrink:0}
+  .gmod .gring svg{transform:rotate(-90deg);width:100%;height:100%}
+  .gmod .gring circle{fill:none;stroke-width:6}
+  .gmod .gring .gc{position:absolute;inset:0;display:grid;place-items:center;font-size:13px;font-weight:800;color:var(--accent-ink)}
+  .gmod .grow{display:flex;align-items:center;gap:13px;margin-top:8px}
+  .gmod .gt small{font-size:11.5px;color:var(--accent-ink);font-weight:700}
+  .gmod .gt b{display:block;font-size:14px;font-weight:800;letter-spacing:-.2px;margin-top:2px}
+  .gmod .gt span{font-size:11px;color:var(--gray);font-weight:600}
+
+  /* movements module */
+  .mmod{padding:6px 6px 8px}
+  .mmod .mh{display:flex;align-items:center;justify-content:space-between;padding:11px 11px 8px}
+  .mmod .mh b{font-size:14px;font-weight:800;letter-spacing:-.2px}
+  .mmod .mh a{color:var(--accent-ink);font-size:12.5px;font-weight:700;text-decoration:none}
+  .item{display:flex;align-items:center;gap:12px;padding:12px 12px;position:relative}
+  .item + .item::before{content:"";position:absolute;top:0;left:53px;right:11px;height:1px;background:var(--line)}
+  .av{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:18px;flex-shrink:0;background:var(--fill)}
+  .item .mid{flex:1;min-width:0}
+  .item .mid b{font-size:14px;font-weight:700;letter-spacing:-.1px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item .mid small{font-size:11.5px;color:var(--gray);font-weight:500}
+  .amt{font-size:14.5px;font-weight:800;letter-spacing:-.3px;flex-shrink:0}
+  .amt.pos{color:var(--accent-ink)}
+  .amt.neg{color:var(--ink)}
+
+  /* tip del día + noticias */
+  .tipmod{display:flex;gap:13px;align-items:flex-start;background:linear-gradient(135deg,#FFF8EC,#FFFFFF)}
+  .tipmod .ti{width:42px;height:42px;border-radius:12px;background:#FBEED2;color:#D98500;display:grid;place-items:center;flex-shrink:0}
+  .tipmod .ti svg{width:21px;height:21px}
+  .tipmod .tx small{font-size:11px;font-weight:800;color:#C77D00;text-transform:uppercase;letter-spacing:.5px}
+  .tipmod .tx p{font-size:13.5px;font-weight:600;line-height:1.45;margin-top:5px;color:var(--ink-2)}
+  .news-item{display:flex;gap:12px;align-items:center;padding:9px 11px;position:relative}
+  .news-item + .news-item::before{content:"";position:absolute;top:0;left:53px;right:11px;height:1px;background:var(--line)}
+  .news-item .nx{width:38px;height:38px;border-radius:11px;background:var(--fill);display:grid;place-items:center;font-size:17px;flex-shrink:0}
+  .news-item .nt{flex:1;min-width:0}
+  .news-item .nt b{font-size:13px;font-weight:700;line-height:1.35;display:block}
+  .news-item .nt small{font-size:11px;color:var(--gray);font-weight:600;margin-top:3px;display:block}
+
+  /* ---------- page head ---------- */
+  .ph{display:flex;align-items:flex-end;justify-content:space-between;padding:10px 6px 16px}
+  .ph .tt{font-size:28px;font-weight:800;letter-spacing:-1px}
+  .ph .ss{font-size:13px;color:var(--gray);font-weight:600;margin-top:2px}
+  .plus{width:42px;height:42px;border-radius:14px;background:var(--ink);color:#fff;display:grid;place-items:center;box-shadow:var(--shadow)}
+  .plus svg{width:20px;height:20px}
+
+  .search{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:15px;padding:12px 15px;box-shadow:var(--shadow);border:1px solid var(--line);margin-bottom:13px}
+  .search svg{width:18px;height:18px;color:var(--gray-2)}
+  .search input{flex:1;border:none;outline:none;background:none;font-family:inherit;font-size:14px;color:var(--ink)}
+  .search input::placeholder{color:var(--gray-2)}
+  .seg{display:flex;gap:4px;background:#DCDDE3;border-radius:14px;padding:4px;margin-bottom:16px}
+  .seg button{flex:1;padding:9px;border-radius:11px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:700;color:var(--ink-2);display:flex;align-items:center;justify-content:center;gap:6px}
+  .seg button svg{width:15px;height:15px}
+  .seg button.on{background:var(--card);color:var(--ink);box-shadow:0 2px 6px rgba(14,15,19,.12)}
+
+  .daygroup{margin-bottom:14px}
+  .dayhead{font-size:12px;font-weight:700;color:var(--gray);padding:0 8px 8px}
+  .listcard{background:var(--card);border-radius:18px;box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden;padding:4px}
+
+  /* stats */
+  .statcard{background:var(--card);border-radius:20px;padding:18px;box-shadow:var(--shadow);border:1px solid var(--line)}
+  .statcard .ct{font-size:15px;font-weight:800;letter-spacing:-.3px;margin-bottom:16px}
+  .cbar{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .cbar .cav{width:36px;height:36px;border-radius:11px;background:var(--fill);display:grid;place-items:center;font-size:16px;flex-shrink:0}
+  .cbar .cb{flex:1;min-width:0}
+  .cbar .l1{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
+  .cbar .l1 .nm{font-size:13.5px;font-weight:700}
+  .cbar .l1 .vl{font-size:13.5px;font-weight:800;letter-spacing:-.3px}
+  .cbar .l1 .vl small{color:var(--gray);font-weight:600;margin-left:5px}
+  .cbar .ln{height:7px;border-radius:999px;background:var(--fill);overflow:hidden}
+  .cbar .ln>i{display:block;height:100%;border-radius:999px}
+
+  /* goals page */
+  .goalbig{background:var(--card);border-radius:20px;padding:18px;box-shadow:var(--shadow);border:1px solid var(--line);margin-bottom:13px}
+  .goalbig .gt2{display:flex;align-items:center;justify-content:space-between}
+  .goalbig .gl{display:flex;align-items:center;gap:13px}
+  .goalbig .ge{width:44px;height:44px;border-radius:13px;background:var(--fill);display:grid;place-items:center;font-size:20px}
+  .goalbig b{font-size:16px;font-weight:800;letter-spacing:-.3px;display:block}
+  .goalbig small{font-size:12.5px;color:var(--gray);font-weight:600}
+  .goalbig .gp2{font-size:16px;font-weight:800;color:var(--accent-ink)}
+  .goalbig .gtrk{height:9px;border-radius:999px;background:var(--fill);margin:15px 0 11px;overflow:hidden}
+  .goalbig .gtrk>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#0CAE73,#0E93A6)}
+  .goalbig .gf2{display:flex;justify-content:space-between;align-items:center}
+  .goalbig .gf2 small b{color:var(--ink);display:inline}
+  .goalbig .gf2 button{padding:8px 15px;border-radius:11px;background:var(--accent-soft);color:var(--accent-ink);border:none;font-family:inherit;font-size:13px;font-weight:700}
+
+  /* debts */
+  .due{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;margin-top:6px}
+  .due svg{width:11px;height:11px}
+  .due.soon{background:rgba(224,134,0,.13);color:var(--amber)}
+  .due.ok{background:var(--fill);color:var(--gray)}
+  .lab{font-size:12px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.7px;padding:0 8px 9px;margin-top:20px}
+
+  /* config */
+  .profile{display:flex;align-items:center;gap:15px;background:var(--card);border-radius:20px;padding:18px;box-shadow:var(--shadow);border:1px solid var(--line)}
+  .profile .pp{width:54px;height:54px;border-radius:16px;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:700;font-size:18px}
+  .profile .pn b{font-size:18px;font-weight:800;letter-spacing:-.3px}
+  .profile .pn small{font-size:12.5px;color:var(--gray);font-weight:600;display:block;margin-top:3px}
+  .profile .badge{margin-left:auto;text-align:center}
+  .profile .badge b{font-size:20px;font-weight:800;color:var(--accent-ink);display:block}
+  .profile .badge small{font-size:10px;color:var(--gray);font-weight:600}
+  .group{background:var(--card);border-radius:18px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--line)}
+  .srow{display:flex;align-items:center;gap:13px;padding:14px 15px;position:relative}
+  .srow + .srow::before{content:"";position:absolute;top:0;left:60px;right:0;height:1px;background:var(--line)}
+  .srow .si{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex-shrink:0}
+  .srow .si svg{width:17px;height:17px}
+  .srow .st{flex:1}.srow .st b{font-size:14.5px;font-weight:700;display:block}.srow .st small{font-size:12px;color:var(--gray);font-weight:500}
+  .srow .val{font-size:14px;font-weight:700;color:var(--gray);background:var(--fill);padding:7px 12px;border-radius:9px}
+  .em{font-size:18px;width:34px;text-align:center;flex-shrink:0}
+  .sw{width:46px;height:28px;border-radius:999px;background:#D2D3D9;position:relative;flex-shrink:0;transition:.22s}
+  .sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:.22s}
+  .sw.on{background:var(--accent)}.sw.on::after{left:21px}
+  .soon{display:flex;align-items:center;gap:13px;background:var(--card);border-radius:18px;padding:15px;box-shadow:var(--shadow);border:1px solid var(--line)}
+  .soon .si2{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--accent-ink);display:grid;place-items:center;flex-shrink:0}
+  .soon .si2 svg{width:20px;height:20px}
+  .soon b{font-size:14.5px;font-weight:700;display:block}.soon small{font-size:12px;color:var(--gray);font-weight:500}
+  .soon .tag{margin-left:auto;font-size:10px;font-weight:800;text-transform:uppercase;color:var(--accent-ink);background:var(--accent-soft);padding:4px 9px;border-radius:7px;flex-shrink:0}
+
+  /* acceso ver movimientos */
+  .seemov{display:flex;align-items:center;gap:13px;text-align:left;cursor:pointer;width:100%}
+  .seemov .smic{width:42px;height:42px;border-radius:12px;background:var(--fill);color:var(--ink-2);display:grid;place-items:center;flex-shrink:0}
+  .seemov .smic svg{width:20px;height:20px}
+  .seemov .smtx{flex:1}
+  .seemov .smtx b{font-size:15px;font-weight:800;letter-spacing:-.2px;display:block}
+  .seemov .smtx small{font-size:12px;color:var(--gray);font-weight:600}
+  .seemov .smarrow{color:var(--gray-2)}
+  .seemov .smarrow svg{width:20px;height:20px}
+
+  /* bottom sheet */
+  .sheet-bg{position:absolute;inset:0;z-index:20;background:rgba(14,15,19,.45);display:none;align-items:flex-end}
+  .sheet-bg.open{display:flex;animation:fadebg .2s ease}
+  @keyframes fadebg{from{opacity:0}to{opacity:1}}
+  .sheet{background:var(--bg);width:100%;max-height:86%;border-radius:26px 26px 0 0;display:flex;flex-direction:column;animation:slideup .32s cubic-bezier(.2,.8,.2,1)}
+  @keyframes slideup{from{transform:translateY(100%)}to{transform:none}}
+  .sheet-grip{width:42px;height:5px;border-radius:3px;background:#C7C8D0;margin:11px auto 2px;flex-shrink:0}
+  .sheet-head{display:flex;align-items:center;justify-content:space-between;padding:8px 18px 12px;flex-shrink:0}
+  .sheet-head b{font-size:21px;font-weight:800;letter-spacing:-.5px}
+  .sheet-head .x{width:34px;height:34px;border-radius:50%;background:var(--fill);border:none;display:grid;place-items:center;color:var(--ink-2)}
+  .sheet-head .x svg{width:18px;height:18px}
+  .sheet-body{overflow-y:auto;padding:4px 16px 26px;scrollbar-width:none}
+  .sheet-body::-webkit-scrollbar{display:none}
+
+  /* donut stats */
+  .donutbox{display:flex;align-items:center;gap:20px;margin-top:4px}
+  .donut2{position:relative;width:122px;height:122px;flex-shrink:0}
+  .donut2 svg{transform:rotate(-90deg);width:100%;height:100%}
+  .donut2 circle{fill:none;stroke-width:4.2}
+  .donut2 .mc2{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .donut2 .mc2 small{font-size:10px;color:var(--gray);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+  .donut2 .mc2 b{font-size:16px;font-weight:800;letter-spacing:-.4px;margin-top:2px}
+  .leg2{flex:1;display:flex;flex-direction:column;gap:11px}
+  .leg2 .li{display:flex;align-items:center;gap:9px;font-size:13px}
+  .leg2 .li .d{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+  .leg2 .li .n{flex:1;color:var(--ink-2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .leg2 .li .p{font-weight:800}
+
+  /* crear categoría */
+  .newcat{width:100%;margin-top:11px;padding:15px;border-radius:16px;border:1.5px dashed rgba(12,174,115,.45);background:var(--accent-soft);color:var(--accent-ink);font-family:inherit;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px}
+  .newcat svg{width:17px;height:17px}
+
+  /* FAB agregar movimiento */
+  .fab{position:absolute;right:18px;bottom:90px;z-index:7;width:56px;height:56px;border-radius:18px;border:none;
+    background:linear-gradient(135deg,#0CAE73,#0E93A6);color:#fff;display:grid;place-items:center;
+    box-shadow:0 16px 32px -10px rgba(12,150,120,.7);transition:transform .12s}
+  .fab svg{width:26px;height:26px}
+  .fab:active{transform:scale(.93)}
+
+  /* nav */
+  .nav{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-around;align-items:center;padding:10px 6px calc(12px + env(safe-area-inset-bottom));background:rgba(231,232,238,.82);backdrop-filter:blur(20px);border-top:1px solid var(--line)}
+  .nav button{background:none;border:none;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--gray-2);padding:4px}
+  .nav button svg{width:24px;height:24px;stroke-width:1.8;fill:none;stroke:currentColor}
+  .nav button small{font-size:9.5px;font-weight:600}
+  .nav button.on{color:var(--accent-ink)}.nav button.on svg{stroke-width:2.2}
+
+  .note{font-size:11.5px;color:var(--gray-2);text-align:center;margin-top:8px;line-height:1.55;font-weight:500;grid-column:span 2}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="scroll">
+
+    <!-- ============ INICIO (BENTO) ============ -->
+    <section class="screen active" id="inicio">
+      <div class="top">
+        <div class="who"><div class="pfp">JS</div><div><small>Buenas, Joaquin</small><b>Tu plata hoy</b></div></div>
+        <button class="tbtn"><span class="pip"></span><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button>
+      </div>
+
+      <div class="bento">
+        <!-- HERO -->
+        <div class="hero">
+          <div class="lab">Balance de junio</div>
+          <div class="num"><span class="c">Gs.</span>1.597.550</div>
+          <span class="delta"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg> 12% más que en mayo</span>
+          <svg class="spark" viewBox="0 0 115 42" fill="none" preserveAspectRatio="none"><path d="M0 32 L16 27 L31 30 L48 20 L65 24 L82 12 L99 16 L115 5" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+
+        <!-- ingresos / gastos -->
+        <div class="mod">
+          <div class="mlab"><span class="mic mic-in"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></span> Ingresos</div>
+          <div class="mval">Gs. 3.254.000</div><div class="msub">Este mes</div>
+        </div>
+        <div class="mod">
+          <div class="mlab"><span class="mic mic-out"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7 17 17M17 7v8H9"/></svg></span> Gastos</div>
+          <div class="mval">Gs. 1.656.450</div><div class="msub">Este mes</div>
+        </div>
+
+        <!-- movimientos recientes -->
+        <div class="mod mmod w2">
+          <div class="mh"><b>Movimientos recientes</b><a href="#" onclick="openMov();return false">Ver todos →</a></div>
+          <div class="item"><div class="av">💻</div><div class="mid"><b>Iva Compra Claude</b><small>Tecnología · 2 jun</small></div><div class="amt neg">−13.000</div></div>
+          <div class="item"><div class="av">📦</div><div class="mid"><b>Compra</b><small>Otros · 2 jun</small></div><div class="amt neg">−198.750</div></div>
+          <div class="item"><div class="av">💰</div><div class="mid"><b>Sueldo</b><small>Ingreso · 1 jun</small></div><div class="amt pos">+3.000.000</div></div>
+        </div>
+
+        <!-- tip del día -->
+        <div class="mod tipmod w2">
+          <div class="ti"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z"/></svg></div>
+          <div class="tx"><small>Tip del día</small><p>Guardá el 10% de cada ingreso apenas te entra, antes de gastar nada. Lo que no ves, no lo gastás.</p></div>
+        </div>
+
+        <p class="note">Prototipo de diseño · datos reales de tu cuenta · el tip es de ejemplo</p>
+      </div>
+    </section>
+
+    <!-- ============ MOVIMIENTOS ============ -->
+    <section class="screen" id="movs">
+      <div class="ph"><div><div class="tt">Movimientos</div><div class="ss">23 este período</div></div><button class="plus"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
+
+      <div class="bento" style="margin-bottom:16px">
+        <div class="mod"><div class="mlab"><span class="mic mic-in"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></span> Ingresos</div><div class="mval">Gs. 3.254.000</div></div>
+        <div class="mod"><div class="mlab"><span class="mic mic-out"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7 17 17M17 7v8H9"/></svg></span> Gastos</div><div class="mval">Gs. 1.656.450</div></div>
+      </div>
+
+      <div class="search"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="Buscar descripción, categoría o nota…"></div>
+      <div class="seg"><button class="on">Todos</button><button>Ingresos</button><button>Gastos</button></div>
+
+      <div class="daygroup"><div class="dayhead">2 de junio</div><div class="listcard">
+        <div class="item"><div class="av">💻</div><div class="mid"><b>Iva Compra Claude</b><small>Tecnología</small></div><div class="amt neg">−13.000</div></div>
+        <div class="item"><div class="av">📦</div><div class="mid"><b>Compra</b><small>Otros</small></div><div class="amt neg">−198.750</div></div>
+      </div></div>
+      <div class="daygroup"><div class="dayhead">1 de junio</div><div class="listcard">
+        <div class="item"><div class="av">💰</div><div class="mid"><b>Sueldo</b><small>Ingreso</small></div><div class="amt pos">+3.000.000</div></div>
+        <div class="item"><div class="av">💻</div><div class="mid"><b>Compra Claude</b><small>Tecnología</small></div><div class="amt neg">−120.000</div></div>
+        <div class="item"><div class="av">💊</div><div class="mid"><b>Compra CortaUñas</b><small>Farmacia</small></div><div class="amt neg">−12.000</div></div>
+        <div class="item"><div class="av">🚗</div><div class="mid"><b>Bolt</b><small>Transporte</small></div><div class="amt neg">−11.500</div></div>
+      </div></div>
+    </section>
+
+    <!-- ============ ESTADÍSTICAS ============ -->
+    <section class="screen" id="stats">
+      <div class="ph"><div><div class="tt">Estadísticas</div><div class="ss">Junio 2026</div></div></div>
+      <div class="bento" style="margin-bottom:16px">
+        <div class="mod"><div class="mlab"><span class="mic mic-in"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></span> Ingresos</div><div class="mval">Gs. 3.254.000</div></div>
+        <div class="mod"><div class="mlab"><span class="mic mic-out"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7 17 17M17 7v8H9"/></svg></span> Gastos</div><div class="mval">Gs. 1.656.450</div></div>
+      </div>
+
+      <div class="seg" style="margin-bottom:16px">
+        <button class="on" onclick="chart('bars',this)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><path d="M4 18h6M4 12h11M4 6h16"/></svg> Barras</button>
+        <button onclick="chart('torta',this)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 3a9 9 0 1 0 9 9h-9Z"/><path d="M12 3v9"/></svg> Torta</button>
+      </div>
+
+      <div class="statcard" id="view-bars">
+        <div class="ct">Gastos por categoría</div>
+        <div class="cbar"><div class="cav">🎬</div><div class="cb"><div class="l1"><span class="nm">Entretenimiento</span><span class="vl">Gs. 355.000<small>21%</small></span></div><div class="ln"><i style="width:100%;background:#E08600"></i></div></div></div>
+        <div class="cbar"><div class="cav">📦</div><div class="cb"><div class="l1"><span class="nm">Otros</span><span class="vl">Gs. 198.750<small>12%</small></span></div><div class="ln"><i style="width:56%;background:#E5484D"></i></div></div></div>
+        <div class="cbar"><div class="cav">🤝</div><div class="cb"><div class="l1"><span class="nm">Deudas personales</span><span class="vl">Gs. 190.000<small>11%</small></span></div><div class="ln"><i style="width:53%;background:#0CAE73"></i></div></div></div>
+        <div class="cbar"><div class="cav">🏠</div><div class="cb"><div class="l1"><span class="nm">Vivienda</span><span class="vl">Gs. 171.000<small>10%</small></span></div><div class="ln"><i style="width:48%;background:#7C5CFF"></i></div></div></div>
+        <div class="cbar" style="margin-bottom:0"><div class="cav">💳</div><div class="cb"><div class="l1"><span class="nm">Tarjeta de crédito</span><span class="vl">Gs. 145.000<small>9%</small></span></div><div class="ln"><i style="width:40%;background:#0EA5E9"></i></div></div></div>
+      </div>
+
+      <div class="statcard" id="view-torta" style="display:none">
+        <div class="ct">Gastos por categoría</div>
+        <div class="donutbox">
+          <div class="donut2">
+            <svg viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="15.915" stroke="#EFEFF3" stroke-width="4.2"/>
+              <circle cx="18" cy="18" r="15.915" stroke="#E08600" stroke-dasharray="30 100" stroke-dashoffset="0"/>
+              <circle cx="18" cy="18" r="15.915" stroke="#E5484D" stroke-dasharray="17 100" stroke-dashoffset="-30"/>
+              <circle cx="18" cy="18" r="15.915" stroke="#0CAE73" stroke-dasharray="16 100" stroke-dashoffset="-47"/>
+              <circle cx="18" cy="18" r="15.915" stroke="#7C5CFF" stroke-dasharray="14 100" stroke-dashoffset="-63"/>
+              <circle cx="18" cy="18" r="15.915" stroke="#0EA5E9" stroke-dasharray="12 100" stroke-dashoffset="-77"/>
+              <circle cx="18" cy="18" r="15.915" stroke="#C7C8D0" stroke-dasharray="11 100" stroke-dashoffset="-89"/>
+            </svg>
+            <div class="mc2"><small>Gastos</small><b>Gs. 1,66M</b></div>
+          </div>
+          <div class="leg2">
+            <div class="li"><span class="d" style="background:#E08600"></span><span class="n">Entretenimiento</span><span class="p">30%</span></div>
+            <div class="li"><span class="d" style="background:#E5484D"></span><span class="n">Otros</span><span class="p">17%</span></div>
+            <div class="li"><span class="d" style="background:#0CAE73"></span><span class="n">Deudas pers.</span><span class="p">16%</span></div>
+            <div class="li"><span class="d" style="background:#7C5CFF"></span><span class="n">Vivienda</span><span class="p">14%</span></div>
+            <div class="li"><span class="d" style="background:#0EA5E9"></span><span class="n">Tarjeta</span><span class="p">12%</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ METAS ============ -->
+    <section class="screen" id="metas">
+      <div class="ph"><div><div class="tt">Metas</div><div class="ss">2 metas activas</div></div><button class="plus"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
+      <div class="goalbig">
+        <div class="gt2"><div class="gl"><span class="ge">🏖️</span><div><b>Viaje a Brasil</b><small>Gs. 1.200.000 de Gs. 3.000.000</small></div></div><span class="gp2">40%</span></div>
+        <div class="gtrk"><i style="width:40%"></i></div>
+        <div class="gf2"><small>Faltan <b>Gs. 1.800.000</b></small><button>+ Abonar</button></div>
+      </div>
+      <div class="goalbig">
+        <div class="gt2"><div class="gl"><span class="ge">💻</span><div><b>Notebook nueva</b><small>Gs. 2.500.000 de Gs. 4.000.000</small></div></div><span class="gp2">62%</span></div>
+        <div class="gtrk"><i style="width:62%"></i></div>
+        <div class="gf2"><small>Faltan <b>Gs. 1.500.000</b></small><button>+ Abonar</button></div>
+      </div>
+    </section>
+
+    <!-- ============ DEUDAS ============ -->
+    <section class="screen" id="deudas">
+      <div class="ph"><div><div class="tt">Deudas</div><div class="ss">Entre personas</div></div><button class="plus"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
+      <div class="bento" style="margin-bottom:8px">
+        <div class="mod"><div class="mlab"><span class="mic mic-in"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></span> Me deben</div><div class="mval">Gs. 1.205.958</div></div>
+        <div class="mod"><div class="mlab"><span class="mic mic-out"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7 17 17M17 7v8H9"/></svg></span> Yo debo</div><div class="mval">Gs. 0</div></div>
+      </div>
+      <div class="seg" style="margin-top:14px"><button class="on">Todas</button><button>Me deben</button><button>Yo debo</button><button>Saldadas</button></div>
+      <div class="lab" style="margin-top:6px">Me deben</div>
+      <div class="listcard">
+        <div class="item"><div class="av" style="background:var(--accent-soft);color:var(--accent-ink);font-weight:700;font-size:15px">W</div><div class="mid"><b>William</b><small>Cuota Oita · 1 jun</small><br><span class="due soon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Vence en 5 días</span></div><div class="amt pos">+100.000</div></div>
+        <div class="item"><div class="av" style="background:var(--accent-soft);color:var(--accent-ink);font-weight:700;font-size:15px">W</div><div class="mid"><b>William</b><small>Cuota Oita · 1 jun</small><br><span class="due ok"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Vence en 18 días</span></div><div class="amt pos">+225.000</div></div>
+        <div class="item"><div class="av" style="background:var(--accent-soft);color:var(--accent-ink);font-weight:700;font-size:15px">W</div><div class="mid"><b>William</b><small>Cuota Carsa · 1 jun</small></div><div class="amt pos">+482.000</div></div>
+      </div>
+    </section>
+
+    <!-- ============ CONFIG ============ -->
+    <section class="screen" id="config">
+      <div class="ph"><div><div class="tt">Configuración</div></div></div>
+      <div class="profile"><div class="pp">JS</div><div class="pn"><b>Joaquin Santacruz</b><small>Cédula 5995253</small></div><div class="badge"><b>23</b><small>movim.</small></div></div>
+      <div class="lab">Recordatorios</div>
+      <div class="soon"><span class="si2"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></span><div><b>Avisos de deudas por vencer</b><small>Te avisamos cuando una deuda está por vencer</small></div><span class="tag">Pronto</span></div>
+      <div class="lab">Categorías</div>
+      <div class="group">
+        <div class="srow"><span class="em">🛒</span><div class="st"><b>Compras supermercado</b></div><div class="sw on"></div></div>
+        <div class="srow"><span class="em">💊</span><div class="st"><b>Compras farmacéuticas</b></div><div class="sw on"></div></div>
+        <div class="srow"><span class="em">🍽️</span><div class="st"><b>Cenas</b></div><div class="sw on"></div></div>
+        <div class="srow"><span class="em">🚗</span><div class="st"><b>Transporte</b></div><div class="sw on"></div></div>
+        <div class="srow"><span class="em">💻</span><div class="st"><b>Tecnología</b></div><div class="sw on"></div></div>
+        <div class="srow"><span class="em">🎬</span><div class="st"><b>Entretenimiento</b></div><div class="sw on"></div></div>
+        <div class="srow"><span class="em">🏠</span><div class="st"><b>Vivienda</b></div><div class="sw on"></div></div>
+        <div class="srow"><span class="em">🤝</span><div class="st"><b>Deudas personales</b></div><div class="sw on"></div></div>
+        <div class="srow"><span class="em">💳</span><div class="st"><b>Tarjeta de crédito</b></div><div class="sw on"></div></div>
+        <div class="srow"><span class="em">📦</span><div class="st"><b>Otros</b></div><div class="sw on"></div></div>
+      </div>
+      <button class="newcat"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Crear categoría nueva</button>
+    </section>
+
+  </div>
+
+  <!-- ventana movimientos -->
+  <div class="sheet-bg" id="movSheet" onclick="closeMov()">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="sheet-grip"></div>
+      <div class="sheet-head"><b>Movimientos</b><button class="x" onclick="closeMov()"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+      <div class="sheet-body">
+        <div class="daygroup"><div class="dayhead">2 de junio</div><div class="listcard">
+          <div class="item"><div class="av">💻</div><div class="mid"><b>Iva Compra Claude</b><small>Tecnología</small></div><div class="amt neg">−13.000</div></div>
+          <div class="item"><div class="av">📦</div><div class="mid"><b>Compra</b><small>Otros</small></div><div class="amt neg">−198.750</div></div>
+        </div></div>
+        <div class="daygroup"><div class="dayhead">1 de junio</div><div class="listcard">
+          <div class="item"><div class="av">💰</div><div class="mid"><b>Sueldo</b><small>Ingreso</small></div><div class="amt pos">+3.000.000</div></div>
+          <div class="item"><div class="av">💻</div><div class="mid"><b>Compra Claude</b><small>Tecnología</small></div><div class="amt neg">−120.000</div></div>
+          <div class="item"><div class="av">💊</div><div class="mid"><b>Compra CortaUñas</b><small>Farmacia</small></div><div class="amt neg">−12.000</div></div>
+          <div class="item"><div class="av">🚗</div><div class="mid"><b>Bolt</b><small>Transporte</small></div><div class="amt neg">−11.500</div></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="fab" id="fab"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
+
+  <nav class="nav">
+    <button class="on" data-s="inicio" onclick="go('inicio')"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg><small>Inicio</small></button>
+    <button data-s="stats" onclick="go('stats')"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V11M12 21V5M19 21v-6"/></svg><small>Stats</small></button>
+    <button data-s="metas" onclick="go('metas')"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg><small>Metas</small></button>
+    <button data-s="deudas" onclick="go('deudas')"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8h11l-3-3M17 16H6l3 3"/></svg><small>Deudas</small></button>
+    <button data-s="config" onclick="go('config')"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0v-.1A1.6 1.6 0 0 0 8 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H2a2 2 0 0 1 0-4h.1A1.6 1.6 0 0 0 4.6 8a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V2a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V8a1.6 1.6 0 0 0 1.5 1H22a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg><small>Config</small></button>
+  </nav>
+</div>
+
+<script>
+  function go(id){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active',s.id===id));
+    document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.s===id));
+    document.querySelector('.scroll').scrollTop=0;
+    document.getElementById('fab').style.display = (id==='inicio'||id==='movs')?'grid':'none';
+  }
+  function openMov(){document.getElementById('movSheet').classList.add('open')}
+  function closeMov(){document.getElementById('movSheet').classList.remove('open')}
+  function chart(which,el){
+    el.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('on'));el.classList.add('on');
+    document.getElementById('view-bars').style.display = which==='bars'?'block':'none';
+    document.getElementById('view-torta').style.display = which==='torta'?'block':'none';
+  }
+  document.querySelectorAll('.sw').forEach(s=>s.addEventListener('click',()=>s.classList.toggle('on')));
+  document.querySelectorAll('.seg').forEach(seg=>{
+    seg.querySelectorAll('button').forEach(b=>b.addEventListener('click',function(){
+      seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));this.classList.add('on');
+    }));
+  });
+</script>
+</body>
+</html>

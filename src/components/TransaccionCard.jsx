@@ -1,11 +1,23 @@
+const CAT_LABEL = {
+  supermercado: 'Supermercado', cenas: 'Cenas', comida: 'Cenas', transporte: 'Transporte',
+  salud: 'Salud', entretenimiento: 'Entretenimiento', ropa: 'Ropa',
+  hogar: 'Hogar', educacion: 'Educación', viajes: 'Viajes', servicios: 'Servicios',
+  suscripciones: 'Suscripciones', mascotas: 'Mascotas',
+  prestamo_banco: 'Préstamo banco', prestamo_coop: 'Préstamo cooperativa',
+  tarjeta_credito: 'Tarjeta de crédito', otro: 'Otro',
+  sueldo: 'Sueldo', freelance: 'Freelance',
+}
+
 const ICONS = {
-  comida: '🍽️', transporte: '🚌', salud: '🏥', entretenimiento: '🎬',
+  cenas: '🍽️', comida: '🍽️', transporte: '🚌', salud: '🏥', entretenimiento: '🎬',
   ropa: '👕', hogar: '🏠', educacion: '📚', viajes: '✈️',
-  servicios: '⚡', sueldo: '💼', freelance: '💻', otro: '💰'
+  servicios: '⚡', sueldo: '💼', freelance: '💻', otro: '💰',
+  suscripciones: '📱', mascotas: '🐾', supermercado: '🛒',
+  prestamo_banco: '🏦', prestamo_coop: '🤝', tarjeta_credito: '💳',
 }
 
 export default function TransaccionCard({ transaccion, onClick }) {
-  const { descripcion, monto, tipo, categoria, fecha } = transaccion
+  const { nota_desc, monto, tipo, categoria, fecha } = transaccion
   const icon = ICONS[categoria] || '💰'
   const esGasto = tipo === 'gasto'
   const fechaFmt = new Date(fecha).toLocaleDateString('es', { day: '2-digit', month: 'short' })
@@ -19,11 +31,11 @@ export default function TransaccionCard({ transaccion, onClick }) {
         {icon}
       </span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-flux-black truncate">{descripcion}</p>
-        <p className="text-xs text-flux-gray">{fechaFmt} · {categoria}</p>
+        <p className="text-sm font-medium text-flux-black truncate">{nota_desc}</p>
+        <p className="text-xs text-flux-gray">{fechaFmt} · {CAT_LABEL[categoria] || categoria}</p>
       </div>
       <span className={esGasto ? 'amount-negative text-sm' : 'amount-positive text-sm'}>
-        {esGasto ? '−' : '+'} ${Math.abs(monto).toLocaleString('es')}
+        {esGasto ? '−' : '+'} Gs. {Math.abs(monto).toLocaleString('es')}
       </span>
     </button>
   )

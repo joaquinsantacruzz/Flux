@@ -1,16 +1,30 @@
 import { useState } from 'react'
-import { transacciones } from '../supabaseClient'
+import { movimientos } from '../supabaseClient'
 
-const CATEGORIAS_GASTO = ['comida','transporte','salud','entretenimiento','ropa','hogar','educacion','viajes','servicios','otro']
+const CATEGORIAS_GASTO = [
+  'supermercado','cenas','transporte','salud',
+  'ropa','hogar','educacion','viajes',
+  'suscripciones','mascotas','prestamo_banco','prestamo_coop','tarjeta_credito','otro',
+]
 const CATEGORIAS_INGRESO = ['sueldo','freelance','otro']
 
-export default function FormTransaccion({ userId, onSave, onCancel, inicial = {} }) {
+const CAT_LABEL = {
+  supermercado: 'Supermercado', cenas: 'Cenas', comida: 'Cenas', transporte: 'Transporte',
+  salud: 'Salud', entretenimiento: 'Entretenimiento', ropa: 'Ropa',
+  hogar: 'Hogar', educacion: 'Educación', viajes: 'Viajes', servicios: 'Servicios',
+  suscripciones: 'Suscripciones', mascotas: 'Mascotas',
+  prestamo_banco: 'Préstamo banco', prestamo_coop: 'Préstamo cooperativa',
+  tarjeta_credito: 'Tarjeta de crédito', otro: 'Otro',
+  sueldo: 'Sueldo', freelance: 'Freelance',
+}
+
+export default function FormTransaccion({ userId, movId, onSave, onCancel, inicial = {} }) {
   const [tipo, setTipo] = useState(inicial.tipo || 'gasto')
-  const [descripcion, setDescripcion] = useState(inicial.descripcion || '')
+  const [nota_desc, setNotaDesc] = useState(inicial.nota_desc || '')
   const [monto, setMonto] = useState(inicial.monto ? String(Math.abs(inicial.monto)) : '')
   const [categoria, setCategoria] = useState(inicial.categoria || '')
   const [fecha, setFecha] = useState(inicial.fecha?.slice(0,10) || new Date().toISOString().slice(0,10))
-  const [notas, setNotas] = useState(inicial.notas || '')
+  const [nota, setNota] = useState(inicial.nota || '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -22,15 +36,12 @@ export default function FormTransaccion({ userId, onSave, onCancel, inicial = {}
     setLoading(true)
     setError('')
     try {
-      await transacciones.create({
-        user_id: userId,
-        tipo,
-        descripcion,
-        monto: Number(monto),
-        categoria,
-        fecha,
-        notas: notas || null
-      })
+      const data = { tipo, nota_desc, monto: Number(monto), categoria, fecha, nota: nota || null }
+      if (movId) {
+        await movimientos.update(movId, data)
+      } else {
+        await movimientos.create({ usuario_id: userId, ...data })
+      }
       onSave()
     } catch (err) {
       setError(err.message)
@@ -61,7 +72,7 @@ export default function FormTransaccion({ userId, onSave, onCancel, inicial = {}
       <div>
         <label className="label">Monto</label>
         <div className="flex items-baseline gap-1">
-          <span className="text-2xl font-bold text-flux-gray">$</span>
+          <span className="text-2xl font-bold text-flux-gray">Gs.</span>
           <input
             type="number"
             required
@@ -81,8 +92,8 @@ export default function FormTransaccion({ userId, onSave, onCancel, inicial = {}
         <input
           type="text"
           required
-          value={descripcion}
-          onChange={e => setDescripcion(e.target.value)}
+          value={nota_desc}
+          onChange={e => setNotaDesc(e.target.value)}
           placeholder="¿En qué?"
           className="input-field"
         />
@@ -103,7 +114,7 @@ export default function FormTransaccion({ userId, onSave, onCancel, inicial = {}
                   : 'border-flux-border text-flux-gray hover:border-flux-gray'
               }`}
             >
-              {c}
+              {CAT_LABEL[c] || c}
             </button>
           ))}
         </div>
@@ -125,8 +136,8 @@ export default function FormTransaccion({ userId, onSave, onCancel, inicial = {}
         <label className="label">Notas (opcional)</label>
         <input
           type="text"
-          value={notas}
-          onChange={e => setNotas(e.target.value)}
+          value={nota}
+          onChange={e => setNota(e.target.value)}
           placeholder="Comentario..."
           className="input-field"
         />

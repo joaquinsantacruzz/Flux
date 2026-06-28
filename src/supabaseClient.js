@@ -1,66 +1,17 @@
+import bcrypt from 'bcryptjs'
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-// Token de sesión almacenado localmente
-let _session = null
-
-function getHeaders(withAuth = true) {
-  const headers = {
+function getHeaders() {
+  return {
     'Content-Type': 'application/json',
     'apikey': SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
   }
-  if (withAuth && _session?.access_token) {
-    headers['Authorization'] = `Bearer ${_session.access_token}`
-  } else {
-    headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`
-  }
-  return headers
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
-
-export async function signUp(email, password) {
-  const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
-    method: 'POST',
-    headers: getHeaders(false),
-    body: JSON.stringify({ email, password })
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.msg || data.error_description || 'Error al registrar')
-  return data
-}
-
-export async function signIn(email, password) {
-  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-    method: 'POST',
-    headers: getHeaders(false),
-    body: JSON.stringify({ email, password })
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.error_description || 'Credenciales incorrectas')
-  _session = data
-  localStorage.setItem('flux_session', JSON.stringify(data))
-  return data
-}
-
-export function signOut() {
-  _session = null
-  localStorage.removeItem('flux_session')
-}
-
-export function loadSession() {
-  const raw = localStorage.getItem('flux_session')
-  if (raw) {
-    _session = JSON.parse(raw)
-  }
-  return _session
-}
-
-export function getSession() {
-  return _session
-}
-
-// ── REST helpers ──────────────────────────────────────────────────────────────
+// ── REST helper ───────────────────────────────────────────────────────────────
 
 async function rest(method, table, body = null, params = '') {
   const url = `${SUPABASE_URL}/rest/v1/${table}${params}`
@@ -71,31 +22,71 @@ async function rest(method, table, body = null, params = '') {
     const err = await res.json().catch(() => ({}))
     throw new Error(err.message || `Error ${res.status}`)
   }
-  if (res.status === 204) return null
+  if (res.status === 204 || res.status === 201) return null
   return res.json()
 }
 
-// ── Transacciones ─────────────────────────────────────────────────────────────
+// ── Auth local ────────────────────────────────────────────────────────────────
 
-export const transacciones = {
+const SESSION_KEY = 'flux_session'
+
+export async function loginWithCedula(cedula, password) {
+  const rows = await rest('GET', 'usuarios', null, `?cedula=eq.${encodeURIComponent(cedula.trim())}&select=*`)
+  if (!rows || rows.length === 0) throw new Error('Cédula no encontrada')
+  const user = rows[0]
+  const valid = await bcrypt.compare(password, user.password_hash)
+  if (!valid) throw new Error('Contraseña incorrecta')
+  const session = { user: { id: user.id, nombre: user.nombre, cedula: user.cedula, email: user.email } }
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+  return session
+}
+
+export async function registerUser(cedula, password, nombre, email) {
+  cedula = cedula.trim()
+  email = email.trim().toLowerCase()
+
+  // Verificar duplicados antes de insertar para dar mensajes claros
+  const [byCed, byEmail] = await Promise.all([
+    rest('GET', 'usuarios', null, `?cedula=eq.${encodeURIComponent(cedula)}&select=id`),
+    rest('GET', 'usuarios', null, `?email=eq.${encodeURIComponent(email)}&select=id`),
+  ])
+  if (byCed && byCed.length > 0) throw new Error('Ya existe una cuenta con esa cédula')
+  if (byEmail && byEmail.length > 0) throw new Error('Ya existe una cuenta con ese correo')
+
+  const password_hash = await bcrypt.hash(password, 10)
+  await rest('POST', 'usuarios', { cedula, password_hash, nombre, email })
+}
+
+export function localSignOut() {
+  localStorage.removeItem(SESSION_KEY)
+}
+
+export function loadLocalSession() {
+  const raw = localStorage.getItem(SESSION_KEY)
+  return raw ? JSON.parse(raw) : null
+}
+
+// ── Movimientos ───────────────────────────────────────────────────────────────
+
+export const movimientos = {
   list: (userId) =>
-    rest('GET', 'transacciones', null,
-      `?user_id=eq.${userId}&order=fecha.desc&select=*`),
+    rest('GET', 'movimientos', null,
+      `?usuario_id=eq.${userId}&order=fecha.desc&select=*`),
 
-  create: (data) => rest('POST', 'transacciones', data),
+  create: (data) => rest('POST', 'movimientos', data),
 
   update: (id, data) =>
-    rest('PATCH', 'transacciones', data, `?id=eq.${id}`),
+    rest('PATCH', 'movimientos', data, `?id=eq.${id}`),
 
   delete: (id) =>
-    rest('DELETE', 'transacciones', null, `?id=eq.${id}`)
+    rest('DELETE', 'movimientos', null, `?id=eq.${id}`)
 }
 
 // ── Metas ─────────────────────────────────────────────────────────────────────
 
 export const metas = {
   list: (userId) =>
-    rest('GET', 'metas', null, `?user_id=eq.${userId}&select=*`),
+    rest('GET', 'metas', null, `?usuario_id=eq.${userId}&select=*`),
 
   create: (data) => rest('POST', 'metas', data),
 
@@ -110,7 +101,7 @@ export const metas = {
 
 export const deudas = {
   list: (userId) =>
-    rest('GET', 'deudas', null, `?user_id=eq.${userId}&select=*`),
+    rest('GET', 'deudas', null, `?usuario_id=eq.${userId}&select=*`),
 
   create: (data) => rest('POST', 'deudas', data),
 
@@ -125,7 +116,7 @@ export const deudas = {
 
 export const cuotas = {
   list: (userId) =>
-    rest('GET', 'cuotas', null, `?user_id=eq.${userId}&select=*`),
+    rest('GET', 'cuotas', null, `?usuario_id=eq.${userId}&select=*`),
 
   create: (data) => rest('POST', 'cuotas', data),
 

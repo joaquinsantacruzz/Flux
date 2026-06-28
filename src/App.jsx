@@ -3,7 +3,6 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './pages/Login'
 import PinLock from './components/PinLock'
 import Inicio from './pages/Inicio'
-import Movimientos from './pages/Movimientos'
 import Estadisticas from './pages/Estadisticas'
 import Metas from './pages/Metas'
 import Deudas from './pages/Deudas'
@@ -15,8 +14,8 @@ function AppRoutes() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-dvh">
-        <div className="w-8 h-8 border-2 border-flux-black border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-dvh" style={{ background: '#E7E8EE' }}>
+        <div className="w-8 h-8 border-2 border-flux-ink border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -27,10 +26,10 @@ function AppRoutes() {
   if (hasPin && !pinVerified) return <PinLock />
 
   return (
-    <div className="bg-white min-h-dvh">
+    <div className="min-h-dvh" style={{ background: '#E7E8EE' }}>
       <Routes>
         <Route path="/" element={<Inicio />} />
-        <Route path="/movimientos" element={<Movimientos />} />
+        <Route path="/movimientos" element={<Navigate to="/" replace />} />
         <Route path="/estadisticas" element={<Estadisticas />} />
         <Route path="/metas" element={<Metas />} />
         <Route path="/deudas" element={<Deudas />} />

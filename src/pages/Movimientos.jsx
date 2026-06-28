@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { transacciones } from '../supabaseClient'
+import { movimientos } from '../supabaseClient'
 import TransaccionCard from '../components/TransaccionCard'
 import Modal from '../components/Modal'
 import FormTransaccion from '../components/FormTransaccion'
@@ -21,7 +21,7 @@ export default function Movimientos() {
   async function load() {
     if (!userId) return
     try {
-      const data = await transacciones.list(userId)
+      const data = await movimientos.list(userId)
       setItems(data || [])
     } catch {}
     finally { setLoading(false) }
@@ -31,7 +31,7 @@ export default function Movimientos() {
 
   const filtrados = items.filter(t => {
     const matchTipo = filtro === 'todos' || t.tipo === filtro
-    const matchBusq = !busqueda || t.descripcion.toLowerCase().includes(busqueda.toLowerCase())
+    const matchBusq = !busqueda || t.nota_desc.toLowerCase().includes(busqueda.toLowerCase())
     return matchTipo && matchBusq
   })
 
@@ -44,7 +44,7 @@ export default function Movimientos() {
   })
 
   async function handleDelete(id) {
-    await transacciones.delete(id)
+    await movimientos.delete(id)
     setSelected(null)
     load()
   }
@@ -114,12 +114,12 @@ export default function Movimientos() {
         <Modal title="Transacción" onClose={() => setSelected(null)}>
           <div className="space-y-3 mb-6">
             {[
-              ['Descripción', selected.descripcion],
-              ['Monto', `$${Math.abs(selected.monto).toLocaleString('es')}`],
+              ['Descripción', selected.nota_desc],
+              ['Monto', `Gs. ${Math.abs(selected.monto).toLocaleString('es')}`],
               ['Tipo', selected.tipo === 'gasto' ? 'Gasto' : 'Ingreso'],
               ['Categoría', selected.categoria],
               ['Fecha', new Date(selected.fecha).toLocaleDateString('es')],
-              selected.notas && ['Notas', selected.notas],
+              selected.nota && ['Notas', selected.nota],
             ].filter(Boolean).map(([l, v]) => (
               <div key={l} className="flex justify-between">
                 <span className="text-xs text-flux-gray">{l}</span>
