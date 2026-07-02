@@ -30,6 +30,8 @@ export default function Estadisticas() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [periodo, setPeriodo] = useState('mes')
+  const now = new Date()
+  const [mesSel, setMesSel] = useState({ month: now.getMonth(), year: now.getFullYear() })
 
   useEffect(() => {
     if (!userId) return
@@ -39,12 +41,23 @@ export default function Estadisticas() {
       .finally(() => setLoading(false))
   }, [userId])
 
-  const now = new Date()
+  const esMesActual = mesSel.month === now.getMonth() && mesSel.year === now.getFullYear()
+
+  function mesAnterior() {
+    setMesSel(m => m.month === 0 ? { month: 11, year: m.year - 1 } : { month: m.month - 1, year: m.year })
+  }
+  function mesSiguiente() {
+    setMesSel(m => {
+      const next = m.month === 11 ? { month: 0, year: m.year + 1 } : { month: m.month + 1, year: m.year }
+      if (next.year > now.getFullYear() || (next.year === now.getFullYear() && next.month > now.getMonth())) return m
+      return next
+    })
+  }
 
   const filtrados = items.filter(t => {
     const d = new Date(t.fecha)
-    if (periodo === 'mes') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
-    return d.getFullYear() === now.getFullYear()
+    if (periodo === 'mes') return d.getMonth() === mesSel.month && d.getFullYear() === mesSel.year
+    return d.getFullYear() === mesSel.year
   })
 
   const totalIngresos = filtrados.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.monto, 0)
@@ -60,16 +73,17 @@ export default function Estadisticas() {
     .sort((a, b) => b.value - a.value)
 
   const barData = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+    const baseMonth = mesSel.month - (5 - i)
+    const d = new Date(mesSel.year, baseMonth, 1)
     const label = d.toLocaleDateString('es', { month: 'short' })
-    const gastos   = items.filter(t => { const td = new Date(t.fecha); return t.tipo === 'gasto'    && td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear() }).reduce((s,t)=>s+t.monto,0)
-    const ingresos = items.filter(t => { const td = new Date(t.fecha); return t.tipo === 'ingreso'  && td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear() }).reduce((s,t)=>s+t.monto,0)
+    const gastos   = items.filter(t => { const td = new Date(t.fecha); return t.tipo === 'gasto'   && td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear() }).reduce((s,t)=>s+t.monto,0)
+    const ingresos = items.filter(t => { const td = new Date(t.fecha); return t.tipo === 'ingreso' && td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear() }).reduce((s,t)=>s+t.monto,0)
     return { label, gastos, ingresos }
   })
 
   const mesLabel = periodo === 'mes'
-    ? now.toLocaleDateString('es', { month: 'long', year: 'numeric' })
-    : now.getFullYear().toString()
+    ? new Date(mesSel.year, mesSel.month, 1).toLocaleDateString('es', { month: 'long', year: 'numeric' })
+    : mesSel.year.toString()
 
   return (
     <div className="min-h-dvh pb-32" style={{ background: '#E7E8EE' }}>
@@ -79,11 +93,19 @@ export default function Estadisticas() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-[22px] font-extrabold" style={{ letterSpacing: '-.5px' }}>Estadísticas</h1>
-            <p className="text-[12px] font-semibold capitalize" style={{ color: '#888A93' }}>{mesLabel}</p>
+            <div className="flex items-center gap-[6px] mt-[2px]">
+              <button onClick={mesAnterior} className="w-[18px] h-[18px] rounded-full grid place-items-center" style={{ background: 'rgba(14,15,19,.08)' }}>
+                <svg width="9" height="9" viewBox="0 0 24 24" stroke="#42434A" strokeWidth="2.8" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <p className="text-[12px] font-semibold capitalize" style={{ color: '#888A93' }}>{mesLabel}</p>
+              <button onClick={mesSiguiente} disabled={esMesActual} className="w-[18px] h-[18px] rounded-full grid place-items-center" style={{ background: 'rgba(14,15,19,.08)', opacity: esMesActual ? 0.3 : 1 }}>
+                <svg width="9" height="9" viewBox="0 0 24 24" stroke="#42434A" strokeWidth="2.8" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+            </div>
           </div>
           {/* Segment selector */}
           <div className="flex gap-1 p-1 rounded-[12px]" style={{ background: 'rgba(14,15,19,.08)' }}>
-            {[{ key:'mes', label:'Este mes' }, { key:'año', label:'Este año' }].map(({ key, label }) => (
+            {[{ key:'mes', label:'Mes' }, { key:'año', label:'Año' }].map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setPeriodo(key)}

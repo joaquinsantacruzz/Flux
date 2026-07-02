@@ -84,6 +84,23 @@ export default function Inicio() {
     localStorage.setItem('flux_vencimientos', JSON.stringify(list))
   }
 
+  const now = new Date()
+  const [mesSel, setMesSel] = useState({ month: now.getMonth(), year: now.getFullYear() })
+
+  function mesAnterior() {
+    setMesSel(m => {
+      if (m.month === 0) return { month: 11, year: m.year - 1 }
+      return { month: m.month - 1, year: m.year }
+    })
+  }
+  function mesSiguiente() {
+    setMesSel(m => {
+      const next = m.month === 11 ? { month: 0, year: m.year + 1 } : { month: m.month + 1, year: m.year }
+      if (next.year > now.getFullYear() || (next.year === now.getFullYear() && next.month > now.getMonth())) return m
+      return next
+    })
+  }
+
   async function load() {
     if (!userId) return
     try { setItems((await movimientos.list(userId)) || []) }
@@ -92,16 +109,18 @@ export default function Inicio() {
 
   useEffect(() => { load() }, [userId])
 
-  const now = new Date()
+  const esMesActual = mesSel.month === now.getMonth() && mesSel.year === now.getFullYear()
 
   const thisMonth = items.filter(t => {
     const d = new Date(t.fecha)
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+    return d.getMonth() === mesSel.month && d.getFullYear() === mesSel.year
   })
-  const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1)
+  const prevMesDate = mesSel.month === 0
+    ? { month: 11, year: mesSel.year - 1 }
+    : { month: mesSel.month - 1, year: mesSel.year }
   const lastMonth = items.filter(t => {
     const d = new Date(t.fecha)
-    return d.getMonth() === lastMonthDate.getMonth() && d.getFullYear() === lastMonthDate.getFullYear()
+    return d.getMonth() === prevMesDate.month && d.getFullYear() === prevMesDate.year
   })
 
   const ingresos = thisMonth.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.monto, 0)
@@ -116,14 +135,14 @@ export default function Inicio() {
     : null
 
   const sparkPath = items.length >= 2 ? buildSparkPath(items) : null
-  const recientes = items.slice(0, 3)
+  const recientes = thisMonth.slice(0, 3)
   const urgentes = vencimientos.filter(v => !isPagado(v) && diasHastaFecha(proximaFecha(v)) <= 3)
 
-  const grupos = {}
-  items.forEach(t => {
+  const gruposMes = {}
+  thisMonth.forEach(t => {
     const key = new Date(t.fecha).toLocaleDateString('es', { day: 'numeric', month: 'long' })
-    if (!grupos[key]) grupos[key] = []
-    grupos[key].push(t)
+    if (!gruposMes[key]) gruposMes[key] = []
+    gruposMes[key].push(t)
   })
 
   async function handleDelete(id) {
@@ -132,7 +151,7 @@ export default function Inicio() {
     load()
   }
 
-  const mesNombre = now.toLocaleDateString('es', { month: 'long' })
+  const mesNombre = new Date(mesSel.year, mesSel.month, 1).toLocaleDateString('es', { month: 'long', year: mesSel.year !== now.getFullYear() ? 'numeric' : undefined })
   const inicial = (nombre[0] || 'U').toUpperCase()
 
   return (
@@ -188,9 +207,17 @@ export default function Inicio() {
             className="absolute inset-0 pointer-events-none"
             style={{ background: 'radial-gradient(120% 90% at 100% 0%, rgba(255,255,255,.22), transparent 55%)' }}
           />
-          <p className="text-[12.5px] font-semibold" style={{ color: 'rgba(255,255,255,.82)', letterSpacing: '.2px' }}>
-            Balance de {mesNombre}
-          </p>
+          <div className="flex items-center gap-2">
+            <button onClick={mesAnterior} className="w-[22px] h-[22px] rounded-full grid place-items-center active:scale-95 transition-transform" style={{ background: 'rgba(255,255,255,.2)' }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" stroke="white" strokeWidth="2.8" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <p className="text-[12.5px] font-semibold capitalize" style={{ color: 'rgba(255,255,255,.82)', letterSpacing: '.2px' }}>
+              Balance de {mesNombre}
+            </p>
+            <button onClick={mesSiguiente} className="w-[22px] h-[22px] rounded-full grid place-items-center active:scale-95 transition-transform" style={{ background: esMesActual ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.2)', opacity: esMesActual ? 0.4 : 1 }} disabled={esMesActual}>
+              <svg width="10" height="10" viewBox="0 0 24 24" stroke="white" strokeWidth="2.8" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
           <p className="mt-2 tabular-nums leading-none" style={{ fontSize: 48, fontWeight: 800, letterSpacing: '-1.8px' }}>
             <span style={{ fontSize: 16, fontWeight: 700, opacity: .7, verticalAlign: '5px', marginRight: 4 }}>
               {balance < 0 ? '− Gs.' : 'Gs.'}
@@ -369,10 +396,10 @@ export default function Inicio() {
         >
           {selectedMov ? (
             <MovDetail mov={selectedMov} onBack={() => setSelectedMov(null)} onDelete={handleDelete} onRefresh={load} />
-          ) : Object.keys(grupos).length === 0 ? (
-            <p className="text-center text-sm text-flux-gray py-8">Sin movimientos</p>
+          ) : Object.keys(gruposMes).length === 0 ? (
+            <p className="text-center text-sm text-flux-gray py-8">Sin movimientos en {mesNombre}</p>
           ) : (
-            Object.entries(grupos).map(([dia, txs]) => (
+            Object.entries(gruposMes).map(([dia, txs]) => (
               <div key={dia} className="mb-[14px]">
                 <p className="text-xs font-bold text-flux-gray px-1 pb-2 uppercase tracking-wider">{dia}</p>
                 <div className="bg-white rounded-[18px] overflow-hidden p-1" style={{ boxShadow: SHADOW, border: BORDER }}>
