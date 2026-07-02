@@ -54,10 +54,15 @@ export default function Estadisticas() {
     })
   }
 
+  function fechaMes(fecha) {
+    const [y, m] = fecha.slice(0, 7).split('-').map(Number)
+    return { year: y, month: m - 1 }
+  }
+
   const filtrados = items.filter(t => {
-    const d = new Date(t.fecha)
-    if (periodo === 'mes') return d.getMonth() === mesSel.month && d.getFullYear() === mesSel.year
-    return d.getFullYear() === mesSel.year
+    const { year, month } = fechaMes(t.fecha)
+    if (periodo === 'mes') return month === mesSel.month && year === mesSel.year
+    return year === mesSel.year
   })
 
   const totalIngresos = filtrados.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.monto, 0)
@@ -76,8 +81,8 @@ export default function Estadisticas() {
     const baseMonth = mesSel.month - (5 - i)
     const d = new Date(mesSel.year, baseMonth, 1)
     const label = d.toLocaleDateString('es', { month: 'short' })
-    const gastos   = items.filter(t => { const td = new Date(t.fecha); return t.tipo === 'gasto'   && td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear() }).reduce((s,t)=>s+t.monto,0)
-    const ingresos = items.filter(t => { const td = new Date(t.fecha); return t.tipo === 'ingreso' && td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear() }).reduce((s,t)=>s+t.monto,0)
+    const gastos   = items.filter(t => { const {year,month} = fechaMes(t.fecha); return t.tipo === 'gasto'   && month === d.getMonth() && year === d.getFullYear() }).reduce((s,t)=>s+t.monto,0)
+    const ingresos = items.filter(t => { const {year,month} = fechaMes(t.fecha); return t.tipo === 'ingreso' && month === d.getMonth() && year === d.getFullYear() }).reduce((s,t)=>s+t.monto,0)
     return { label, gastos, ingresos }
   })
 

@@ -47,9 +47,14 @@ export default function Movimientos() {
 
   useEffect(() => { load() }, [userId])
 
+  function fechaMes(fecha) {
+    const [y, m] = fecha.slice(0, 7).split('-').map(Number)
+    return { year: y, month: m - 1 }
+  }
+
   const filtrados = items.filter(t => {
-    const d = new Date(t.fecha)
-    const matchMes = d.getMonth() === mesSel.month && d.getFullYear() === mesSel.year
+    const { year, month } = fechaMes(t.fecha)
+    const matchMes = month === mesSel.month && year === mesSel.year
     const matchTipo = filtro === 'todos' || t.tipo === filtro
     const matchBusq = !busqueda || t.nota_desc.toLowerCase().includes(busqueda.toLowerCase())
     return matchMes && matchTipo && matchBusq

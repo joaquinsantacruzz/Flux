@@ -111,16 +111,21 @@ export default function Inicio() {
 
   const esMesActual = mesSel.month === now.getMonth() && mesSel.year === now.getFullYear()
 
+  function fechaMes(fecha) {
+    const [y, m] = fecha.slice(0, 7).split('-').map(Number)
+    return { year: y, month: m - 1 }
+  }
+
   const thisMonth = items.filter(t => {
-    const d = new Date(t.fecha)
-    return d.getMonth() === mesSel.month && d.getFullYear() === mesSel.year
+    const { year, month } = fechaMes(t.fecha)
+    return month === mesSel.month && year === mesSel.year
   })
   const prevMesDate = mesSel.month === 0
     ? { month: 11, year: mesSel.year - 1 }
     : { month: mesSel.month - 1, year: mesSel.year }
   const lastMonth = items.filter(t => {
-    const d = new Date(t.fecha)
-    return d.getMonth() === prevMesDate.month && d.getFullYear() === prevMesDate.year
+    const { year, month } = fechaMes(t.fecha)
+    return month === prevMesDate.month && year === prevMesDate.year
   })
 
   const ingresos = thisMonth.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.monto, 0)
