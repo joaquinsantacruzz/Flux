@@ -17,6 +17,24 @@ export default function Movimientos() {
   const [showForm, setShowForm] = useState(false)
   const [selected, setSelected] = useState(null)
   const [loading, setLoading] = useState(true)
+  const now = new Date()
+  const [mesSel, setMesSel] = useState({ month: now.getMonth(), year: now.getFullYear() })
+
+  const esMesActual = mesSel.month === now.getMonth() && mesSel.year === now.getFullYear()
+
+  function mesAnterior() {
+    setMesSel(m => m.month === 0 ? { month: 11, year: m.year - 1 } : { month: m.month - 1, year: m.year })
+  }
+  function mesSiguiente() {
+    setMesSel(m => {
+      const next = m.month === 11 ? { month: 0, year: m.year + 1 } : { month: m.month + 1, year: m.year }
+      if (next.year > now.getFullYear() || (next.year === now.getFullYear() && next.month > now.getMonth())) return m
+      return next
+    })
+  }
+
+  const mesLabel = new Date(mesSel.year, mesSel.month, 1)
+    .toLocaleDateString('es', { month: 'long', year: 'numeric' })
 
   async function load() {
     if (!userId) return
@@ -30,15 +48,16 @@ export default function Movimientos() {
   useEffect(() => { load() }, [userId])
 
   const filtrados = items.filter(t => {
+    const d = new Date(t.fecha)
+    const matchMes = d.getMonth() === mesSel.month && d.getFullYear() === mesSel.year
     const matchTipo = filtro === 'todos' || t.tipo === filtro
     const matchBusq = !busqueda || t.nota_desc.toLowerCase().includes(busqueda.toLowerCase())
-    return matchTipo && matchBusq
+    return matchMes && matchTipo && matchBusq
   })
 
-  // Agrupar por mes
   const grupos = {}
   filtrados.forEach(t => {
-    const key = new Date(t.fecha).toLocaleDateString('es', { month: 'long', year: 'numeric' })
+    const key = new Date(t.fecha).toLocaleDateString('es', { day: 'numeric', month: 'long' })
     if (!grupos[key]) grupos[key] = []
     grupos[key].push(t)
   })
@@ -51,8 +70,20 @@ export default function Movimientos() {
 
   return (
     <div className="page-container animate-fade-up">
+      {/* Header */}
       <div className="flex items-center justify-between mb-5">
-        <h1 className="text-2xl font-bold">Movimientos</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Movimientos</h1>
+          <div className="flex items-center gap-[6px] mt-[2px]">
+            <button onClick={mesAnterior} className="w-[18px] h-[18px] rounded-full grid place-items-center" style={{ background: 'rgba(14,15,19,.08)' }}>
+              <svg width="9" height="9" viewBox="0 0 24 24" stroke="#42434A" strokeWidth="2.8" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <p className="text-[12px] font-semibold capitalize" style={{ color: '#888A93' }}>{mesLabel}</p>
+            <button onClick={mesSiguiente} disabled={esMesActual} className="w-[18px] h-[18px] rounded-full grid place-items-center" style={{ background: 'rgba(14,15,19,.08)', opacity: esMesActual ? 0.3 : 1 }}>
+              <svg width="9" height="9" viewBox="0 0 24 24" stroke="#42434A" strokeWidth="2.8" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
+        </div>
         <button
           onClick={() => setShowForm(true)}
           className="w-9 h-9 bg-flux-black text-white rounded-full flex items-center justify-center text-xl hover:bg-gray-800 active:scale-95 transition-all"
@@ -90,11 +121,11 @@ export default function Movimientos() {
           <div className="w-6 h-6 border-2 border-flux-black border-t-transparent rounded-full animate-spin" />
         </div>
       ) : filtrados.length === 0 ? (
-        <EmptyState icon="🔍" title="Sin resultados" subtitle="Prueba otro filtro o búsqueda" />
+        <EmptyState icon="📭" title={`Sin movimientos`} subtitle={`No hay registros en ${mesLabel}`} />
       ) : (
-        Object.entries(grupos).map(([mes, txs]) => (
-          <div key={mes} className="mb-6">
-            <p className="section-title capitalize">{mes}</p>
+        Object.entries(grupos).map(([dia, txs]) => (
+          <div key={dia} className="mb-6">
+            <p className="section-title capitalize">{dia}</p>
             <div className="divide-y divide-flux-border/40">
               {txs.map(t => (
                 <TransaccionCard key={t.id} transaccion={t} onClick={() => setSelected(t)} />
